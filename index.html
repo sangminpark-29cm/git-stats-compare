@@ -594,10 +594,7 @@ function pct(a, b) {
   const sign = p > 0 ? '+' : '';
   const cls = p > 0 ? 'positive' : p < 0 ? 'negative' : 'neutral';
   const ratio = Math.abs(b) / Math.abs(a);
-  let text = `${sign}${p.toFixed(1)}%`;
-  if (Math.abs(p) >= 100) {
-    text += ` (약 ${ratio.toFixed(1)}배)`;
-  }
+  let text = `${sign}${p.toFixed(1)}% (약 ${ratio.toFixed(1)}배)`;
   return { text, cls };
 }
 
