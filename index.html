@@ -464,6 +464,9 @@
           <button data-mode="detailed" onclick="setMode('detailed')">상세 분석 (커밋별, 파일 필터 가능)</button>
         </div>
         <span class="hint" id="modeHint">주간 단위로 집계된 GitHub 통계를 사용합니다. 빠르지만 파일 필터링은 불가합니다.</span>
+        <div id="detailedWarning" style="display:none;margin-top:0.5rem;padding:0.6rem 0.85rem;background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;font-size:0.85rem;color:#dc2626;font-weight:600;">
+          &#9888; 상세 분석 중에는 브라우저를 끄거나 탭을 닫지 마세요. 분석이 중단됩니다.
+        </div>
       </div>
 
       <div class="form-group form-full" id="excludeSection" style="display:none;">
@@ -482,6 +485,7 @@
         <div class="progress-bar" id="progressBar">
           <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
           <div class="progress-text" id="progressText">준비 중...</div>
+          <div id="timerText" style="font-size:0.85rem;color:var(--text-secondary);text-align:center;margin-top:0.25rem;"></div>
         </div>
         <div class="error-msg" id="errorMsg"></div>
       </div>
@@ -561,6 +565,7 @@ function setMode(mode) {
   document.getElementById('modeHint').textContent = mode === 'fast'
     ? '주간 단위로 집계된 GitHub 통계를 사용합니다. 빠르지만 파일 필터링은 불가합니다.'
     : '각 커밋을 개별 조회하여 파일별 통계를 집계합니다. 정확하지만 시간이 오래 걸릴 수 있습니다.';
+  document.getElementById('detailedWarning').style.display = mode === 'detailed' ? '' : 'none';
 }
 
 // ── Presets ──
@@ -641,6 +646,46 @@ function removeExclude(ext) {
 }
 renderExcludeTags();
 
+// ── Timer ──
+let timerInterval = null;
+let timerStartTime = null;
+let timerEstTotal = null;
+
+function startTimer() {
+  timerStartTime = Date.now();
+  timerEstTotal = null;
+  const el = document.getElementById('timerText');
+  el.textContent = '경과: 0:00';
+  timerInterval = setInterval(() => {
+    const elapsed = Math.floor((Date.now() - timerStartTime) / 1000);
+    const mm = Math.floor(elapsed / 60);
+    const ss = String(elapsed % 60).padStart(2, '0');
+    let text = `경과: ${mm}:${ss}`;
+    if (timerEstTotal && timerEstTotal > elapsed) {
+      const rem = timerEstTotal - elapsed;
+      const rmm = Math.floor(rem / 60);
+      const rss = String(rem % 60).padStart(2, '0');
+      text += ` / 예상 잔여: ${rmm}:${rss}`;
+    }
+    el.textContent = text;
+  }, 1000);
+}
+
+function updateTimerEstimate(progressPct) {
+  if (!timerStartTime || progressPct <= 0) return;
+  const elapsed = (Date.now() - timerStartTime) / 1000;
+  timerEstTotal = Math.round(elapsed / (progressPct / 100));
+}
+
+function stopTimer() {
+  if (timerInterval) clearInterval(timerInterval);
+  timerInterval = null;
+  const elapsed = Math.floor((Date.now() - timerStartTime) / 1000);
+  const mm = Math.floor(elapsed / 60);
+  const ss = String(elapsed % 60).padStart(2, '0');
+  document.getElementById('timerText').textContent = `완료 (총 ${mm}:${ss} 소요)`;
+}
+
 // ── Helpers ──
 function fmt(n) {
   if (n === undefined || n === null) return '-';
@@ -665,9 +710,10 @@ function showError(msg) {
 function hideError() {
   document.getElementById('errorMsg').classList.remove('active');
 }
-function setProgress(pct, text) {
-  document.getElementById('progressFill').style.width = pct + '%';
+function setProgress(p, text) {
+  document.getElementById('progressFill').style.width = p + '%';
   document.getElementById('progressText').textContent = text;
+  updateTimerEstimate(p);
 }
 
 // ── Granularity ──
@@ -1182,6 +1228,7 @@ async function startAnalysis() {
   btn.innerHTML = '<span class="spinner"></span> 분석 중...';
   progress.classList.add('active');
   document.getElementById('results').classList.remove('active');
+  startTimer();
 
   try {
     let result;
@@ -1190,8 +1237,10 @@ async function startAnalysis() {
     } else {
       result = await analyzeDetailed(owner, repoName, token, periodA, periodB);
     }
+    stopTimer();
     renderResults(result, repo, periodA, periodB);
   } catch (e) {
+    stopTimer();
     showError(e.message);
   } finally {
     btn.disabled = false;
