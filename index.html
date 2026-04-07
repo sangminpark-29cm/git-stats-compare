@@ -1239,6 +1239,7 @@ async function startAnalysis() {
     }
     stopTimer();
     renderResults(result, repo, periodA, periodB);
+    saveToStorage();
   } catch (e) {
     stopTimer();
     showError(e.message);
@@ -1249,22 +1250,75 @@ async function startAnalysis() {
   }
 }
 
-// ── Default dates ──
-(function setDefaults() {
-  const today = new Date();
-  const sixMonthsAgo = new Date(today);
-  sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
-  const twelveMonthsAgo = new Date(today);
-  twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12);
-  const eighteenMonthsAgo = new Date(today);
-  eighteenMonthsAgo.setMonth(eighteenMonthsAgo.getMonth() - 18);
+// ── localStorage ──
+const LS_KEY = 'git-stats-compare';
 
-  const toISO = d => d.toISOString().split('T')[0];
+function saveToStorage() {
+  const state = {
+    repo: document.getElementById('repoInput').value,
+    token: document.getElementById('tokenInput').value,
+    periodAStart: document.getElementById('periodAStart').value,
+    periodAEnd: document.getElementById('periodAEnd').value,
+    periodBStart: document.getElementById('periodBStart').value,
+    periodBEnd: document.getElementById('periodBEnd').value,
+    mode: analysisMode,
+    excludeExtensions,
+    lastResult: analysisResult,
+  };
+  try { localStorage.setItem(LS_KEY, JSON.stringify(state)); } catch(e) {}
+}
 
-  document.getElementById('periodAStart').value = toISO(eighteenMonthsAgo);
-  document.getElementById('periodAEnd').value = toISO(twelveMonthsAgo);
-  document.getElementById('periodBStart').value = toISO(sixMonthsAgo);
-  document.getElementById('periodBEnd').value = toISO(today);
+function loadFromStorage() {
+  try {
+    const raw = localStorage.getItem(LS_KEY);
+    if (!raw) return false;
+    const state = JSON.parse(raw);
+
+    if (state.repo) document.getElementById('repoInput').value = state.repo;
+    if (state.token) document.getElementById('tokenInput').value = state.token;
+    if (state.periodAStart) document.getElementById('periodAStart').value = state.periodAStart;
+    if (state.periodAEnd) document.getElementById('periodAEnd').value = state.periodAEnd;
+    if (state.periodBStart) document.getElementById('periodBStart').value = state.periodBStart;
+    if (state.periodBEnd) document.getElementById('periodBEnd').value = state.periodBEnd;
+    if (state.mode) setMode(state.mode);
+    if (state.excludeExtensions) {
+      excludeExtensions = state.excludeExtensions;
+      renderExcludeTags();
+    }
+
+    // Restore last result
+    if (state.lastResult && state.lastResult.data) {
+      renderResults(
+        state.lastResult.data,
+        state.lastResult.repo,
+        state.lastResult.periodA,
+        state.lastResult.periodB
+      );
+    }
+    return true;
+  } catch(e) { return false; }
+}
+
+// ── Init ──
+(function init() {
+  const loaded = loadFromStorage();
+  if (!loaded) {
+    // Default dates
+    const today = new Date();
+    const sixMonthsAgo = new Date(today);
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+    const twelveMonthsAgo = new Date(today);
+    twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12);
+    const eighteenMonthsAgo = new Date(today);
+    eighteenMonthsAgo.setMonth(eighteenMonthsAgo.getMonth() - 18);
+
+    const toISO = d => d.toISOString().split('T')[0];
+
+    document.getElementById('periodAStart').value = toISO(eighteenMonthsAgo);
+    document.getElementById('periodAEnd').value = toISO(twelveMonthsAgo);
+    document.getElementById('periodBStart').value = toISO(sixMonthsAgo);
+    document.getElementById('periodBEnd').value = toISO(today);
+  }
 })();
 </script>
 
