@@ -414,6 +414,7 @@
       <div class="form-full">
         <label style="font-size:0.85rem;font-weight:600;color:var(--text-secondary);margin-bottom:0.35rem;display:block;">빠른 설정</label>
         <div class="preset-bar">
+          <button class="preset-btn" onclick="applyPreset('yoy-m')">YoY 최근 1개월</button>
           <button class="preset-btn" onclick="applyPreset('yoy-q')">YoY 최근 분기</button>
           <button class="preset-btn" onclick="applyPreset('yoy-h')">YoY 최근 6개월</button>
           <button class="preset-btn" onclick="applyPreset('yoy-y')">YoY 최근 1년</button>
@@ -569,7 +570,13 @@ function applyPreset(type) {
 
   let aStart, aEnd, bStart, bEnd;
 
-  if (type === 'yoy-q') {
+  if (type === 'yoy-m') {
+    // YoY 최근 1개월
+    bEnd = new Date(today);
+    bStart = new Date(today); bStart.setMonth(bStart.getMonth() - 1);
+    aEnd = new Date(bEnd); aEnd.setFullYear(aEnd.getFullYear() - 1);
+    aStart = new Date(bStart); aStart.setFullYear(aStart.getFullYear() - 1);
+  } else if (type === 'yoy-q') {
     // YoY 최근 분기: 최근 3개월 vs 작년 같은 3개월
     bEnd = new Date(today);
     bStart = new Date(today); bStart.setMonth(bStart.getMonth() - 3);
