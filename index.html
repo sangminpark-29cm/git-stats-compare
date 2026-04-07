@@ -649,11 +649,12 @@ renderExcludeTags();
 // ── Timer ──
 let timerInterval = null;
 let timerStartTime = null;
-let timerEstTotal = null;
+let timerSmoothedTotal = null;
+const EMA_ALPHA = 0.15; // 낮을수록 안정적 (0.1~0.2 권장)
 
 function startTimer() {
   timerStartTime = Date.now();
-  timerEstTotal = null;
+  timerSmoothedTotal = null;
   const el = document.getElementById('timerText');
   el.textContent = '경과: 0:00';
   timerInterval = setInterval(() => {
@@ -661,20 +662,26 @@ function startTimer() {
     const mm = Math.floor(elapsed / 60);
     const ss = String(elapsed % 60).padStart(2, '0');
     let text = `경과: ${mm}:${ss}`;
-    if (timerEstTotal && timerEstTotal > elapsed) {
-      const rem = timerEstTotal - elapsed;
+    if (timerSmoothedTotal && timerSmoothedTotal > elapsed) {
+      const rem = Math.round(timerSmoothedTotal - elapsed);
       const rmm = Math.floor(rem / 60);
       const rss = String(rem % 60).padStart(2, '0');
-      text += ` / 예상 잔여: ${rmm}:${rss}`;
+      text += ` / 예상 잔여: 약 ${rmm}:${rss}`;
     }
     el.textContent = text;
   }, 1000);
 }
 
 function updateTimerEstimate(progressPct) {
-  if (!timerStartTime || progressPct <= 0) return;
+  if (!timerStartTime || progressPct <= 5) return;
   const elapsed = (Date.now() - timerStartTime) / 1000;
-  timerEstTotal = Math.round(elapsed / (progressPct / 100));
+  const rawEstTotal = elapsed / (progressPct / 100);
+  if (timerSmoothedTotal === null) {
+    timerSmoothedTotal = rawEstTotal;
+  } else {
+    // EMA: 새 값을 조금만 반영하여 안정화
+    timerSmoothedTotal = EMA_ALPHA * rawEstTotal + (1 - EMA_ALPHA) * timerSmoothedTotal;
+  }
 }
 
 function stopTimer() {
