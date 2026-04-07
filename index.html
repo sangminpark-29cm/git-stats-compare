@@ -372,6 +372,26 @@
       color: var(--text-secondary);
       font-weight: 500;
     }
+
+    .preset-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+    .preset-btn {
+      padding: 0.4rem 0.75rem;
+      font-size: 0.85rem;
+      border-radius: 6px;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      cursor: pointer;
+      font-weight: 500;
+      transition: all 0.2s;
+      color: var(--text-secondary);
+    }
+    .preset-btn:hover { background: #eef2ff; border-color: var(--primary-light); color: var(--primary); }
+    .preset-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
   </style>
 </head>
 <body>
@@ -389,6 +409,17 @@
       <div class="form-group form-full">
         <label>GitHub 저장소 (owner/repo)</label>
         <input type="text" id="repoInput" placeholder="예: 29CM-Developers/api-29cm-promotion-service" />
+      </div>
+
+      <div class="form-full">
+        <label style="font-size:0.85rem;font-weight:600;color:var(--text-secondary);margin-bottom:0.35rem;display:block;">빠른 설정</label>
+        <div class="preset-bar">
+          <button class="preset-btn" onclick="applyPreset('yoy-q')">YoY 최근 분기</button>
+          <button class="preset-btn" onclick="applyPreset('yoy-h')">YoY 최근 6개월</button>
+          <button class="preset-btn" onclick="applyPreset('yoy-y')">YoY 최근 1년</button>
+          <button class="preset-btn" onclick="applyPreset('qoq')">QoQ (분기 비교)</button>
+          <button class="preset-btn" onclick="applyPreset('hoh')">HoH (반기 비교)</button>
+        </div>
       </div>
 
       <div class="period-box period-a">
@@ -529,6 +560,55 @@ function setMode(mode) {
   document.getElementById('modeHint').textContent = mode === 'fast'
     ? '주간 단위로 집계된 GitHub 통계를 사용합니다. 빠르지만 파일 필터링은 불가합니다.'
     : '각 커밋을 개별 조회하여 파일별 통계를 집계합니다. 정확하지만 시간이 오래 걸릴 수 있습니다.';
+}
+
+// ── Presets ──
+function applyPreset(type) {
+  const toISO = d => d.toISOString().split('T')[0];
+  const today = new Date();
+
+  let aStart, aEnd, bStart, bEnd;
+
+  if (type === 'yoy-q') {
+    // YoY 최근 분기: 최근 3개월 vs 작년 같은 3개월
+    bEnd = new Date(today);
+    bStart = new Date(today); bStart.setMonth(bStart.getMonth() - 3);
+    aEnd = new Date(bEnd); aEnd.setFullYear(aEnd.getFullYear() - 1);
+    aStart = new Date(bStart); aStart.setFullYear(aStart.getFullYear() - 1);
+  } else if (type === 'yoy-h') {
+    // YoY 최근 6개월
+    bEnd = new Date(today);
+    bStart = new Date(today); bStart.setMonth(bStart.getMonth() - 6);
+    aEnd = new Date(bEnd); aEnd.setFullYear(aEnd.getFullYear() - 1);
+    aStart = new Date(bStart); aStart.setFullYear(aStart.getFullYear() - 1);
+  } else if (type === 'yoy-y') {
+    // YoY 최근 1년
+    bEnd = new Date(today);
+    bStart = new Date(today); bStart.setFullYear(bStart.getFullYear() - 1);
+    aEnd = new Date(bEnd); aEnd.setFullYear(aEnd.getFullYear() - 1);
+    aStart = new Date(bStart); aStart.setFullYear(aStart.getFullYear() - 1);
+  } else if (type === 'qoq') {
+    // QoQ: 최근 분기 vs 직전 분기
+    bEnd = new Date(today);
+    bStart = new Date(today); bStart.setMonth(bStart.getMonth() - 3);
+    aEnd = new Date(bStart);
+    aStart = new Date(aEnd); aStart.setMonth(aStart.getMonth() - 3);
+  } else if (type === 'hoh') {
+    // HoH: 최근 6개월 vs 직전 6개월
+    bEnd = new Date(today);
+    bStart = new Date(today); bStart.setMonth(bStart.getMonth() - 6);
+    aEnd = new Date(bStart);
+    aStart = new Date(aEnd); aStart.setMonth(aStart.getMonth() - 6);
+  }
+
+  document.getElementById('periodAStart').value = toISO(aStart);
+  document.getElementById('periodAEnd').value = toISO(aEnd);
+  document.getElementById('periodBStart').value = toISO(bStart);
+  document.getElementById('periodBEnd').value = toISO(bEnd);
+
+  // Highlight active preset
+  document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+  event.target.classList.add('active');
 }
 
 // ── Exclude Extensions ──
