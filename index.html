@@ -593,7 +593,12 @@ function pct(a, b) {
   const p = ((b - a) / Math.abs(a)) * 100;
   const sign = p > 0 ? '+' : '';
   const cls = p > 0 ? 'positive' : p < 0 ? 'negative' : 'neutral';
-  return { text: `${sign}${p.toFixed(1)}%`, cls };
+  const ratio = Math.abs(b) / Math.abs(a);
+  let text = `${sign}${p.toFixed(1)}%`;
+  if (Math.abs(p) >= 100) {
+    text += ` (약 ${ratio.toFixed(1)}배)`;
+  }
+  return { text, cls };
 }
 
 function showError(msg) {
